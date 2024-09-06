@@ -76,7 +76,7 @@ Every so often, it's a good idea to run the script with the `--verify` argument.
 
 ## Environment Variables
 
-- You can export `JMAP_DEBUG` to `1` to see additional debugging info printed to the console
+- Export `JMAP_DEBUG` to `True` to see additional debugging info printed to the console
 - You can export `NOT_BEFORE` to override the default of `2000-01-01` or whatever date is specified in the config file
 
 ## Good luck
