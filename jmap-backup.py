@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Back up messages from a JMAP mailbox (e.g. Fastmail)
+Back up a Fastmail JMAP mailbox in .eml format
 
 https://nathangrigg.com/2021/08/fastmail-backup/
 https://www.fastmail.com/for-developers/integrating-with-fastmail/
@@ -14,28 +14,34 @@ import argparse
 import collections
 import datetime
 import os
-import requests
 import string
 import sys
 import subprocess
+import importlib
 
-try:
-    import yaml
-except ImportError:
-    print(f"yaml module could not be loaded: try `pip install pyyaml`")
-    exit(1)
+def import_module_globally(module_name):
+    module = importlib.import_module(module_name)
+    globals()[module_name] = module
+
+def str_to_bool(s):
+    return s and s.lower() in [ 'true', '1', 'yes', 'on' ]
+
+# prereqs
+for module in ['requests', 'yaml']:
+    try:
+        m = importlib.import_module(module)
+        globals()[module] = m
+    except ImportError:
+        print(f"{module} module could not be loaded, check README for installation requirements")
+        exit(1)
 
 Session         = collections.namedtuple('Session', 'headers account_id api_url download_template')
 Email           = collections.namedtuple('Email', 'id blob_id date subject')
-DEBUG           = os.getenv('JMAP_DEBUG', False)
+DEBUG           = str_to_bool(os.getenv('JMAP_DEBUG'))
 NOT_BEFORE      = os.getenv('NOT_BEFORE', '2000-01-01')
+DEFAULT_CONFIG  = '~/.jmapbackup/fastmail.yml'
 CONNECT_TIMEOUT = 3
 READ_TIMEOUT    = 20
-UNMOUNT_ON_EXIT = False
-MOUNT_COMMANDS  = {
-    'mount':   [ os.path.expanduser('~/Sync/Scripts/smbmount.sh'), '--unattended', '--mount', 'nas/unattended' ],
-    'unmount': [ os.path.expanduser('~/Sync/Scripts/smbmount.sh'), '--unmount', 'nas/unattended' ]
-}
 
 def dbg(*args, newline=True):
     if not DEBUG:
@@ -115,7 +121,6 @@ def query(session, start, end):
             date = datetime.datetime.fromisoformat(item['receivedAt'].rstrip('Z'))
             yield Email(item['id'], item['blobId'], date, item['subject'])
 
-        # Set anchor to get the next set of emails.
         query_request = json_request['methodCalls'][0][1]
         query_request['anchor'] = response[0]['ids'][-1]
         query_request['anchorOffset'] = 1
@@ -128,6 +133,14 @@ def email_filename(email):
     directory = email.date.strftime('%Y-%m')
     filename = f'{date}_{email.id}_{subject.strip()}.eml'
     return directory, filename
+
+def run_if(cmd):
+    if cmd:
+        if os.path.exists(cmd[0]):
+            dbg(f'executing: {cmd}')
+            subprocess.run(cmd)
+        else:
+            print(f'invalid command: {cmd}', file=sys.stderr)
 
 def check_dest_dir(dest_dir, retry=True):
     dir_exists = os.path.exists(dest_dir)
@@ -164,32 +177,36 @@ def download_email(session, email, base_dir):
     return True
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Back up a JMAP mailbox in .eml format', add_help=False)
+    parser = argparse.ArgumentParser(description='Back up a Fastmail JMAP mailbox in .eml format', add_help=False)
     parser.add_argument('-h','--help', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('-v','--verify', action='store_true', help='Fully verify backed up emails and redownload if missing')
     parser.add_argument('-o','--open', action='store_true', help='Open the configured dest_dir in Finder')
-    parser.add_argument('-c','--config', help='Path to config file', nargs=1)
+    parser.add_argument('-c','--config', help=f'Path to config file (default: {DEFAULT_CONFIG})', nargs=1)
     args = parser.parse_args()
     if args.help:
         parser.print_help()
         sys.exit(0)
-    if not args.config:
-        sys.exit(f'you must specify a config file (run with -h for help)')
 
-    cfg_file = os.path.expanduser(args.config[0])
+    if args.config:
+        cfg_file = os.path.expanduser(args.config[0])
+    else:
+        cfg_file = os.path.expanduser(DEFAULT_CONFIG)
     if not os.path.exists(cfg_file):
         sys.exit(f"Error: configuration file '{cfg_file}' does not exist")
     with open(cfg_file, 'r') as fh:
         config = yaml.safe_load(fh)
 
+    # parse pre- and post-commands
+    PRE_COMMAND = [os.path.expanduser(c) for c in config.get('pre_cmd', [])]
+    POST_COMMAND = [os.path.expanduser(c) for c in config.get('post_cmd', [])]
+    run_if(PRE_COMMAND)
+
     dest_dir = config['dest_dir']
-    if not check_dest_dir(dest_dir, True):
-        subprocess.run(MOUNT_COMMANDS['mount'])
-        check_dest_dir(dest_dir, False)
-        UNMOUNT_ON_EXIT = True
+    check_dest_dir(dest_dir, False)
 
     if args.open:
         subprocess.run(['open', dest_dir])
+        #subprocess.run(POST_COMMAND)
         sys.exit(0)
 
     #calculate date window
@@ -206,12 +223,12 @@ if __name__ == '__main__':
     not_before = datetime.datetime.strptime(not_before_str, '%Y-%m-%d').replace(tzinfo=datetime.timezone.utc)
     
     if args.verify:
+        dbg('Verification enabled (this will take longer)')
         start_window = not_before
         last_verify_count = config.get('last_verify_count', None)
     else:
         start_window = config.get('last_end_time', not_before)
 
-    # Start backup
     num_results = 0
     num_verified = 0
     failed_downloads = []
@@ -242,7 +259,7 @@ if __name__ == '__main__':
 
     dbg('Done!')
 
-    # Retry failed downloads
+    # retry failed downloads
     if failed_downloads:
         dbg(f'Retrying {len(failed_downloads)} failed downloads')
         for email in failed_downloads:
@@ -257,11 +274,9 @@ if __name__ == '__main__':
         print(f'Verified: {num_verified}')
     print(f'Archived: {num_results}')
 
-    # Write config
     config['last_end_time'] = end_window
     if num_verified > 0:
         config['last_verify_count'] = num_verified
     with open(cfg_file, 'w') as fh:
-        yaml.dump(config, fh)
-    if UNMOUNT_ON_EXIT:
-        subprocess.run(MOUNT_COMMANDS['unmount'])
+        yaml.safe_dump(config, fh, indent=4, default_flow_style=False)
+    run_if(POST_COMMAND)
