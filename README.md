@@ -20,9 +20,9 @@ PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requ
 
 ## Setup
 
-1. Clone this repo (if you don't know how to do that, click the green **Code** button above, then **Download ZIP**)
+1. Download the latest [release][4] or clone this repo (if you don't know how to do that, click the green **Code** button above, then **Download ZIP**)
 
-2. Unzip and copy the `jmap-backup.py` file to a directory in your `$PATH` (I suggest `/usr/local/bin` if you're unsure) and make sure it's executable (`chmod +x jmap-backup.py`)
+2. Copy the `jmap-backup.py` file to a directory in your `$PATH` (I suggest `/usr/local/bin` if you're unsure) and make sure it's executable (`chmod +x jmap-backup.py`)
 
 3. Create a configuration file (YAML) to store your API key, destination directory where the backup will be kept, and other settings. You can create multiple config files to back up different accounts or to keep copies on different storage (local, SMB/NFS etc).
 
@@ -86,3 +86,4 @@ I've been using this script for a few months with good success, but it has been 
 [1]: https://nathangrigg.com/2021/08/fastmail-backup
 [2]: https://github.com/luckman212/jmap-backup/issues
 [3]: https://www.soma-zone.com/LaunchControl/
+[4]: https://github.com/luckman212/jmap-backup/releases/latest
