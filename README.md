@@ -1,4 +1,4 @@
-<img src="./icon.png" height="96">
+<img src="./icon.png" height="96" />
 
 # jmap-backup
 
@@ -20,7 +20,11 @@ PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requ
 
 ## Setup
 
-1. Create a configuration file (YAML) to store your API key, destination directory where the backup will be kept, and other settings. You can create multiple config files to back up different accounts or to keep copies on different storage (local, SMB/NFS etc).
+1. Clone this repo (if you don't know how to do that, click the green **Code** button above, then **Download ZIP**)
+
+2. Unzip and copy the `jmap-backup.py` file to a directory in your `$PATH` (I suggest `/usr/local/bin` if you're unsure) and make sure it's executable (`chmod +x jmap-backup.py`)
+
+3. Create a configuration file (YAML) to store your API key, destination directory where the backup will be kept, and other settings. You can create multiple config files to back up different accounts or to keep copies on different storage (local, SMB/NFS etc).
 
 > If you don't specify a config file with the `-c` option, the program will assume a default path of `~/.jmapbackup/fastmail.yml`.
 
@@ -56,13 +60,6 @@ pre_cmd:
 - /mnt/jmap
 ```
 
-### Environment Variables
-
-- You can export `JMAP_DEBUG` to `1` to see additional debugging info printed to the console
-- You can export `NOT_BEFORE` to override the default of `2000-01-01` or whatever date is specified in the config file
-
-2. Save the `jmap-backup.py` script somewhere in your `$PATH` and ensure it's executable (`chmod +x jmap-backup.py`)
-
 ## Run
 
 ```shell
@@ -76,6 +73,11 @@ This is designed to run quickly and often, so running it daily is no problem and
 ## Verification
 
 Every so often, it's a good idea to run the script with the `--verify` argument. This will be slower, but will thoroughly check that every message in your mailbox exists on the filesystem, and will "fill in the blanks" if any are missing.
+
+## Environment Variables
+
+- You can export `JMAP_DEBUG` to `1` to see additional debugging info printed to the console
+- You can export `NOT_BEFORE` to override the default of `2000-01-01` or whatever date is specified in the config file
 
 ## Good luck
 
