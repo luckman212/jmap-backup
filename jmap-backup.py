@@ -12,22 +12,18 @@ https://jmap.io/crash-course.html
 
 import argparse
 import collections
-import datetime
+import datetime as dt
 import os
 import string
 import sys
 import subprocess
 import importlib
+import json
 
-def import_module_globally(module_name):
-    module = importlib.import_module(module_name)
-    globals()[module_name] = module
-
-def str_to_bool(s):
-    return s and s.lower() in [ 'true', '1', 'yes', 'on' ]
+ADDITIONAL_MODULES = [ 'requests' ]
 
 # prereqs
-for module in ['requests', 'yaml']:
+for module in ADDITIONAL_MODULES:
     try:
         m = importlib.import_module(module)
         globals()[module] = m
@@ -35,11 +31,14 @@ for module in ['requests', 'yaml']:
         print(f"{module} module could not be loaded, check README for installation requirements")
         exit(1)
 
+def str_to_bool(s):
+    return s and s.lower() in [ 'true', '1', 'yes', 'on' ]
+
 Session         = collections.namedtuple('Session', 'headers account_id api_url download_template')
 Email           = collections.namedtuple('Email', 'id blob_id date subject')
 DEBUG           = str_to_bool(os.getenv('JMAP_DEBUG'))
 NOT_BEFORE      = os.getenv('NOT_BEFORE', '2000-01-01')
-DEFAULT_CONFIG  = '~/.jmapbackup/fastmail.yml'
+DEFAULT_CONFIG  = '~/.jmapbackup/fastmail.json'
 CONNECT_TIMEOUT = 3
 READ_TIMEOUT    = 20
 
@@ -118,7 +117,7 @@ def query(session, start, end):
             return
 
         for item in response[1]['list']:
-            date = datetime.datetime.fromisoformat(item['receivedAt'].rstrip('Z'))
+            date = dt.datetime.fromisoformat(item['receivedAt'].rstrip('Z'))
             yield Email(item['id'], item['blobId'], date, item['subject'])
 
         query_request = json_request['methodCalls'][0][1]
@@ -137,7 +136,7 @@ def email_filename(email):
 def run_if(cmd):
     if cmd:
         if os.path.exists(cmd[0]):
-            dbg(f'executing: {cmd}')
+            dbg(f'executing: `{' '.join(cmd)}`')
             subprocess.run(cmd)
         else:
             print(f'invalid command: {cmd}', file=sys.stderr)
@@ -193,8 +192,12 @@ if __name__ == '__main__':
         cfg_file = os.path.expanduser(DEFAULT_CONFIG)
     if not os.path.exists(cfg_file):
         sys.exit(f"Error: configuration file '{cfg_file}' does not exist")
-    with open(cfg_file, 'r') as fh:
-        config = yaml.safe_load(fh)
+
+    try:
+        with open(cfg_file, 'r') as fh:
+            config = json.load(fh)
+    except Exception as e:
+        sys.exit(f'error: {e}')
 
     # parse pre- and post-commands
     PRE_COMMAND = [os.path.expanduser(c) for c in config.get('pre_cmd', [])]
@@ -213,21 +216,25 @@ if __name__ == '__main__':
     session = get_session(config['token'])
     delay_hours = config.get('delay_hours', 24)
 
-    end_window = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0) - datetime.timedelta(
+    end_window = dt.datetime.now(dt.timezone.utc).replace(microsecond=0) - dt.timedelta(
         hours=delay_hours
     )
 
     # On first run, use 'not_before' if set in config (YYYY-MM-DD); otherwise use NOT_BEFORE var
     not_before_str = str(config.get('not_before', NOT_BEFORE))
     dbg(f'Will not archive email prior to {not_before_str}')
-    not_before = datetime.datetime.strptime(not_before_str, '%Y-%m-%d').replace(tzinfo=datetime.timezone.utc)
+    not_before = dt.datetime.strptime(not_before_str, '%Y-%m-%d').replace(tzinfo=dt.timezone.utc)
     
     if args.verify:
         dbg('Verification enabled (this will take longer)')
         start_window = not_before
         last_verify_count = config.get('last_verify_count', None)
     else:
-        start_window = config.get('last_end_time', not_before)
+        start_window = config.get('last_end_time')
+        if start_window and isinstance(start_window, str):
+            start_window = dt.datetime.fromisoformat(start_window)
+        else:
+            start_window = not_before
 
     num_results = 0
     num_verified = 0
@@ -274,9 +281,11 @@ if __name__ == '__main__':
         print(f'Verified: {num_verified}')
     print(f'Archived: {num_results}')
 
+    if isinstance(end_window, dt.datetime):
+        end_window = end_window.strftime('%Y-%m-%dT%H:%M:%SZ')
     config['last_end_time'] = end_window
     if num_verified > 0:
         config['last_verify_count'] = num_verified
     with open(cfg_file, 'w') as fh:
-        yaml.safe_dump(config, fh, indent=4, default_flow_style=False)
+        json.dump(config, fh, indent=4)
     run_if(POST_COMMAND)

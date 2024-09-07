@@ -6,16 +6,26 @@ This is a Python program to back up messages from your Fastmail JMAP mailbox.
 
 Based on the amazing [work by Nathan Grigg][1] 🙏
 
+## ⚠️ Breaking Change
+
+Versions prior to 1.1 stored configuration as YAML. This has been changed to JSON because Python can read/write it without requiring the PyYAML module.
+
+If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][6]:
+
+```sh
+yq -p yaml -o json fastmail.yml >fastmail.json
+```
+
 ## Prerequisites
 
 - a Fastmail API key (get from https://app.fastmail.com/settings/security/tokens)
 - Python 3 (`brew install python3` if you're on macOS)
-- Python's `requests` and `pyyaml` modules
+- Python's `requests` module
 
 To get the required modules, either install them in a virtualenv, or globally with:
 
 ```shell
-PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requests pyyaml
+PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requests
 ```
 
 ## Setup
@@ -24,46 +34,46 @@ PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requ
 
 2. Copy the `jmap-backup.py` file to a directory in your `$PATH` (I suggest `/usr/local/bin` if you're unsure) and make sure it's executable (`chmod +x jmap-backup.py`)
 
-3. Create a configuration file (YAML) to store your API key, destination directory where the backup will be kept, and other settings. You can create multiple config files to back up different accounts or to keep copies on different storage (local, SMB/NFS etc).
+3. Create a configuration file (JSON) to store your API key, destination directory where the backup will be kept, and other settings. You can create multiple config files to back up different accounts or to keep copies on different storage (local, SMB/NFS etc).
 
-> If you don't specify a config file with the `-c` option, the program will assume a default path of `~/.jmapbackup/fastmail.yml`.
+> If you don't specify a config file with the `-c` option, the program will assume a default path of `~/.jmapbackup/fastmail.json`.
 
-A bare minimum config file should look something like:
+A bare minimum config file must contain at least the `dest_dir` and `token` keys, for example:
 
-```yaml
-dest_dir: /Volumes/storage/backups/Fastmail
-token: {your_api_key_here e.g. fmu1-xxxxxx...}
+```js
+{
+  "dest_dir": "/Volumes/storage/backups/Fastmail",
+  "token": "{your_api_key_here e.g. fmu1-xxxxxx...}"
+}
 ```
 
 ### Other optional parameters for the config file
 
-- `delay_hours` - back up only messages at least this many hours old
-- `not_before`  - cut off time before which messages will not be backed up
-- `pre_cmd`     - command (and args) to run prior to execution, most often used to mount some remote storage location such as an SMB or NFS share. It is formatted as an array so you can provide additional args as needed.
-- `post_cmd`    - command to run post-execution (e.g. unmount the share)
+| Key           | Description                                                                                                                                                                                                | Example value |
+|:------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------- |
+| `delay_hours` | Back up only messages at least this many hours old                                                                                                                                                         | `24`          |
+| `not_before`  | Cut off date before which messages will not be backed up                                                                                                                                                   | `2018-06-01`  |
+| `pre_cmd`     | Command (and args) to run prior to execution, most often used to mount some remote storage location such as an SMB or NFS share. It is formatted as an array so you can provide additional args as needed. | (see below)   |
+| `post_cmd`    | Command to run post-execution (e.g. unmount the share)                                                                                                                                                     | (see below)   |
 
-Example of pre/post commands in config file (`~` will be expanded by Python):
+Example of pre/post commands in config file (`~` chars will be expanded by Python):
 
-```yml
-pre_cmd: [ '/sbin/mount', '-t', 'smbfs', '//luckman212:hunter2@nas/backups', '/mnt/jmap' ]
-post_cmd: [ '/sbin/umount', '-t', 'smbfs', '/mnt/jmap' ]
-```
-
-When Python saves the configuration, the commands will be "unwrapped" and rewritten in this format (which is also valid)
-
-```yml
-pre_cmd:
-- /sbin/mount
-- -t
-- smbfs
-- //luckman212:hunter2@nas/backups
-- /mnt/jmap
+```js
+{ 
+  "pre_cmd": [
+    "/sbin/mount", "-t", "smbfs",
+    "//luckman212:hunter2@nas/backups", "/mnt/jmap"
+  ],
+  "post_cmd": [
+    "/sbin/umount", "-t", "smbfs", "/mnt/jmap"
+  ]
+}
 ```
 
 ## Run
 
 ```shell
-jmap-backup.py -c ~/.jmapbackup/fastmail.yml
+jmap-backup.py -c ~/.jmapbackup/fastmail.json
 ```
 
 Progress messages will be printed to the console. When the job is finished, you should see your messages in the destination directory, organized in folders in `YYYY-MM` format. The individual messages are saved as standard `.eml` format files with the filename made up of a datestamp, messageid and subject.
@@ -83,7 +93,9 @@ Every so often, it's a good idea to run the script with the `--verify` argument.
 
 I've been using this script for a few months with good success, but it has been tested on exactly _one_ system! So you may encounter issues. If you do, please [report them][2].
 
+
 [1]: https://nathangrigg.com/2021/08/fastmail-backup
 [2]: https://github.com/luckman212/jmap-backup/issues
 [3]: https://www.soma-zone.com/LaunchControl/
 [4]: https://github.com/luckman212/jmap-backup/releases/latest
+[5]: https://github.com/mikefarah/yq
