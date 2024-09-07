@@ -10,7 +10,7 @@ Based on the amazing [work by Nathan Grigg][1] 🙏
 
 Versions prior to 1.1 stored configuration as YAML. This has been changed to JSON because Python can read/write it without requiring the PyYAML module.
 
-If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][6]:
+If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][5]:
 
 ```sh
 yq -p yaml -o json fastmail.yml >fastmail.json
