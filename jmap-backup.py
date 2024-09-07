@@ -136,7 +136,7 @@ def email_filename(email):
 def run_if(cmd):
     if cmd:
         if os.path.exists(cmd[0]):
-            dbg(f'executing: `{' '.join(cmd)}`')
+            dbg(f'executing: `{" ".join(cmd)}`')
             subprocess.run(cmd)
         else:
             print(f'invalid command: {cmd}', file=sys.stderr)
@@ -169,7 +169,7 @@ def download_email(session, email, base_dir):
         r.raise_for_status()
         with open(full_path, 'wb') as fh:
             fh.write(r.content)
-        dbg(f'Downloaded {email.id} {email.date.strftime('%Y-%m-%d %H:%M:%S')}')
+        dbg(f'Downloaded {email.id} {email.date.strftime("%Y-%m-%d %H:%M:%S")}')
     except requests.RequestException as e:
         dbg(f"Failed to download {email.id}: {e}")
         return False
