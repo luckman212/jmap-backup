@@ -28,8 +28,7 @@ for module in ADDITIONAL_MODULES:
         m = importlib.import_module(module)
         globals()[module] = m
     except ImportError:
-        print(f"{module} module could not be loaded, check README for installation requirements")
-        exit(1)
+        sys.exit(f"{module} module could not be loaded, check README for installation requirements")
 
 def str_to_bool(s):
     return s and s.lower() in [ 'true', '1', 'yes', 'on' ]
