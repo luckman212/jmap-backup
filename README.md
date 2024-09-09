@@ -6,9 +6,9 @@ This is a Python program to back up messages from your Fastmail JMAP mailbox.
 
 Based on the amazing [work by Nathan Grigg][1] 🙏
 
-## ⚠️ Breaking Change
+## N.B. — The configuration is now in JSON format
 
-Versions prior to 1.1 stored configuration as YAML. This has been changed to JSON because Python can read/write it without requiring the PyYAML module.
+Versions prior to 1.1 stored configuration as YAML. This was changed to JSON because Python can read _and_ write it without requiring the PyYAML module.
 
 If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][5]:
 
