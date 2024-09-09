@@ -19,10 +19,10 @@ yq -p yaml -o json fastmail.yml >fastmail.json
 ## Prerequisites
 
 - a Fastmail API key (get from https://app.fastmail.com/settings/security/tokens)
-- Python 3 (`brew install python3` if you're on macOS)
-- Python's `requests` module
+- Docker *-or-*
+- Python 3 + the `requests` module
 
-To get the required modules, either install them in a virtualenv, or globally with:
+To get the module, either install it in a virtualenv, or globally with:
 
 ```shell
 PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requests
