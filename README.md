@@ -28,7 +28,7 @@ To get the module, either install it in a virtualenv, or globally with:
 PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requests
 ```
 
-## Setup
+## Setup (run locally)
 
 1. Download the latest [release][4] or clone this repo (if you don't know how to do that, click the green **Code** button above, then **Download ZIP**)
 
@@ -47,30 +47,7 @@ A bare minimum config file must contain at least the `dest_dir` and `token` keys
 }
 ```
 
-### Other optional parameters for the config file
-
-| Key           | Description                                                                                                                                                                                                | Example value |
-|:------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------- |
-| `delay_hours` | Back up only messages at least this many hours old                                                                                                                                                         | `24`          |
-| `not_before`  | Cut off date before which messages will not be backed up                                                                                                                                                   | `2018-06-01`  |
-| `pre_cmd`     | Command (and args) to run prior to execution, most often used to mount some remote storage location such as an SMB or NFS share. It is formatted as an array so you can provide additional args as needed. | (see below)   |
-| `post_cmd`    | Command to run post-execution (e.g. unmount the share)                                                                                                                                                     | (see below)   |
-
-Example of pre/post commands in config file (`~` chars will be expanded by Python):
-
-```js
-{ 
-  "pre_cmd": [
-    "/sbin/mount", "-t", "smbfs",
-    "//luckman212:hunter2@nas/backups", "/mnt/jmap"
-  ],
-  "post_cmd": [
-    "/sbin/umount", "-t", "smbfs", "/mnt/jmap"
-  ]
-}
-```
-
-## Run
+Finally, to start the backup, run
 
 ```shell
 jmap-backup.py -c ~/.jmapbackup/fastmail.json
@@ -84,7 +61,7 @@ This is designed to run quickly and often, so running it daily is no problem and
 
 Every so often, it's a good idea to run the script with the `--verify` argument. This will be slower, but will thoroughly check that every message in your mailbox exists on the filesystem, and will "fill in the blanks" if any are missing.
 
-## Docker
+## Setup (Docker)
 
 Some have requested a Docker configuration to make it easier to set up and run, so I'm providing the basic instructions below. I have limited experience creating Docker images, so please make any suggestions or corrections via the [issue tracker][2].
 
@@ -119,7 +96,7 @@ EOF
 docker build -t jmap-backup .
 ```
 
-5. Run it! The first run will take longer. You can "tail" the logs by running `docker logs -f jmap-backup-1` in another shell.
+5. Run it using the command below (adjust the paths as needed!) The first run will take longer. You can tail the logs to see what's happening by running `docker logs -f jmap-backup-1` in another shell.
 
 ```shell
 docker run --rm \
@@ -129,6 +106,29 @@ docker run --rm \
 -e JMAP_DEBUG=true \
 jmap-backup \
 -c /cfg/fm-docker.json
+```
+
+### Additional (optional) parameters for the config file
+
+| Key           | Description                                                                                                                                                                                                | Example value |
+|:------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------- |
+| `delay_hours` | Back up only messages at least this many hours old                                                                                                                                                         | `24`          |
+| `not_before`  | Cut off date before which messages will not be backed up                                                                                                                                                   | `2018-06-01`  |
+| `pre_cmd`     | Command (and args) to run prior to execution, most often used to mount some remote storage location such as an SMB or NFS share. It is formatted as an array so you can provide additional args as needed. | (see below)   |
+| `post_cmd`    | Command to run post-execution (e.g. unmount the share)                                                                                                                                                     | (see below)   |
+
+Example of pre/post commands in config file (`~` chars will be expanded by Python):
+
+```js
+{ 
+  "pre_cmd": [
+    "/sbin/mount", "-t", "smbfs",
+    "//luckman212:hunter2@nas/backups", "/mnt/jmap"
+  ],
+  "post_cmd": [
+    "/sbin/umount", "-t", "smbfs", "/mnt/jmap"
+  ]
+}
 ```
 
 ## Environment Variables
