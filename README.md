@@ -103,7 +103,7 @@ jmap-backup \
 -c /cfg/fm-docker.json
 ```
 
-### Additional (optional) parameters for the config file
+## Additional (optional) parameters for the config file
 
 | Key           | Description                                                                                                                                                                                                | Example value |
 |:------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------- |
