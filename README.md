@@ -86,7 +86,7 @@ Every so often, it's a good idea to run the script with the `--verify` argument.
 
 ## Docker
 
-Some have requested a Docker configuration to make it easier to set up and run. I am providing the instructions below. I have limited experience creating Docker images, so please make any suggestions or corrections via the [issue tracker][2].
+Some have requested a Docker configuration to make it easier to set up and run, so I'm providing the basic instructions below. I have limited experience creating Docker images, so please make any suggestions or corrections via the [issue tracker][2].
 
 1. Clone the repo on your Docker host
 
@@ -133,7 +133,7 @@ jmap-backup \
 
 ## Environment Variables
 
-- Export `JMAP_DEBUG` to `True` to see additional debugging info printed to the console. This was used e.g. in the sample Docker config above.
+- Export `JMAP_DEBUG` to `True` to see additional debugging info printed to the console.
 - You can export `NOT_BEFORE` to override the default of `2000-01-01` or whatever date is specified in the config file
 
 ## Good luck
