@@ -6,16 +6,6 @@ This is a Python program to back up messages from your Fastmail JMAP mailbox.
 
 Based on the amazing [work by Nathan Grigg][1] 🙏
 
-## N.B. — The configuration is now in JSON format
-
-Versions prior to 1.1 stored configuration as YAML. This was changed to JSON because Python can read _and_ write it without requiring the PyYAML module.
-
-If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][5]:
-
-```sh
-yq -p yaml -o json fastmail.yml >fastmail.json
-```
-
 ## Prerequisites
 
 - a Fastmail API key (get from https://app.fastmail.com/settings/security/tokens)
@@ -46,6 +36,15 @@ A bare minimum config file must contain at least the `dest_dir` and `token` keys
   "token": "{your_api_key_here e.g. fmu1-xxxxxx...}"
 }
 ```
+
+> N.B. — The configuration is now in JSON format
+> Versions prior to 1.1 stored configuration as YAML. This was changed to JSON because Python can read _and_ write it without requiring the PyYAML module.
+> 
+> If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][5]:
+> 
+> ```sh
+> yq -p yaml -o json fastmail.yml >fastmail.json
+> ```
 
 Finally, to start the backup, run
 
