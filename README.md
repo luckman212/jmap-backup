@@ -84,9 +84,56 @@ This is designed to run quickly and often, so running it daily is no problem and
 
 Every so often, it's a good idea to run the script with the `--verify` argument. This will be slower, but will thoroughly check that every message in your mailbox exists on the filesystem, and will "fill in the blanks" if any are missing.
 
+## Docker
+
+Some have requested a Docker configuration to make it easier to set up and run. I am providing the instructions below. I have limited experience creating Docker images, so please make any suggestions or corrections via the [issue tracker][2].
+
+1. Clone the repo on your Docker host
+
+```shell
+git clone https://github.com/luckman212/jmap-backup && cd jmap-backup
+```
+
+2. Create the directories to persistently store your configuration and backups
+
+```shell
+mkdir -p cfg backups/Fastmail
+```
+
+3. Set up your config file. It will be slightly different for Docker since the `dest_dir` can either be a local Docker mount/volume or a network share if one is available to your container. Sample config file below:
+
+```shell
+cat <<EOF >cfg/fm-docker.json
+{
+    "delay_hours": 24,
+    "dest_dir": "/backups/Fastmail",
+    "not_before": "2020-01-01",
+    "token": "fmu1-xxxx..."
+}
+EOF
+```
+
+4. Build the Docker image:
+
+```shell
+docker build -t jmap-backup .
+```
+
+5. Run it! The first run will take longer. You can "tail" the logs by running `docker logs -f jmap-backup-1` in another shell.
+
+```shell
+docker run --rm \
+--name jmap-backup-1 \
+-v /root/jmap-backup/cfg:/cfg \
+-v /root/jmap-backup/backups:/backups \
+-e JMAP_DEBUG=true \
+jmap-backup \
+-c /cfg/fm-docker.json
+```
+
 ## Environment Variables
 
-- Export `JMAP_DEBUG` to `True` to see additional debugging info printed to the console
+- Export `JMAP_DEBUG` to `True` to see additional debugging info printed to the console. This was used e.g. in the sample Docker config above.
 - You can export `NOT_BEFORE` to override the default of `2000-01-01` or whatever date is specified in the config file
 
 ## Good luck
