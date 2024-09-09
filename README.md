@@ -37,7 +37,7 @@ A bare minimum config file must contain at least the `dest_dir` and `token` keys
 }
 ```
 
-> N.B. — The configuration is now in JSON format
+> **N.B.** — The configuration is now in JSON format
 > Versions prior to 1.1 stored configuration as YAML. This was changed to JSON because Python can read _and_ write it without requiring the PyYAML module.
 > 
 > If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][5]:
@@ -55,10 +55,6 @@ jmap-backup.py -c ~/.jmapbackup/fastmail.json
 Progress messages will be printed to the console. When the job is finished, you should see your messages in the destination directory, organized in folders in `YYYY-MM` format. The individual messages are saved as standard `.eml` format files with the filename made up of a datestamp, messageid and subject.
 
 This is designed to run quickly and often, so running it daily is no problem and should complete within a minute or two. It's a good idea to stick it in your crontab or set up a LaunchAgent to trigger it at regular intervals. I suggest [LaunchControl][3] (no affiliation) if you're on a Mac and don't want to fiddle about with XML files.
-
-## Verification
-
-Every so often, it's a good idea to run the script with the `--verify` argument. This will be slower, but will thoroughly check that every message in your mailbox exists on the filesystem, and will "fill in the blanks" if any are missing.
 
 ## Setup (Docker)
 
@@ -134,6 +130,10 @@ Example of pre/post commands in config file (`~` chars will be expanded by Pytho
 
 - Export `JMAP_DEBUG` to `True` to see additional debugging info printed to the console.
 - You can export `NOT_BEFORE` to override the default of `2000-01-01` or whatever date is specified in the config file
+
+## Verification
+
+Every so often, it's a good idea to run the script with the additional `--verify` argument. This will be slower, but will thoroughly check that every message in your mailbox exists on the filesystem, and will "fill in the blanks" if any are missing.
 
 ## Good luck
 
