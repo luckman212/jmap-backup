@@ -26,8 +26,6 @@ PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requ
 
 3. Create a configuration file (JSON) to store your API key, destination directory where the backup will be kept, and other settings. You can create multiple config files to back up different accounts or to keep copies on different storage (local, SMB/NFS etc).
 
-> If you don't specify a config file with the `-c` option, the program will assume a default path of `~/.jmapbackup/fastmail.json`.
-
 A bare minimum config file must contain at least the `dest_dir` and `token` keys, for example:
 
 ```js
@@ -37,20 +35,19 @@ A bare minimum config file must contain at least the `dest_dir` and `token` keys
 }
 ```
 
-> **N.B.** — The configuration is now in JSON format
-> Versions prior to 1.1 stored configuration as YAML. This was changed to JSON because Python can read _and_ write it without requiring the PyYAML module.
-> 
-> If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][5]:
+> _The configuration is now in JSON format (prior to v1.1 it was stored as YAML). This change was made because Python can read _and_ write it without requiring the PyYAML module. If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][5]:_
 > 
 > ```sh
 > yq -p yaml -o json fastmail.yml >fastmail.json
 > ```
 
-Finally, to start the backup, run
+4. Finally, start the backup by running
 
 ```shell
 jmap-backup.py -c ~/.jmapbackup/fastmail.json
 ```
+
+> If you don't specify a config file with the `-c` option, the program will assume a default path of `~/.jmapbackup/fastmail.json`
 
 Progress messages will be printed to the console. When the job is finished, you should see your messages in the destination directory, organized in folders in `YYYY-MM` format. The individual messages are saved as standard `.eml` format files with the filename made up of a datestamp, messageid and subject.
 
