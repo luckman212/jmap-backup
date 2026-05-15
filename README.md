@@ -24,30 +24,20 @@ PIP_REQUIRE_VIRTUALENV=false python3 -m pip install --break-system-packages requ
 
 2. Copy the `jmap-backup.py` file to a directory in your `$PATH` (I suggest `/usr/local/bin` if you're unsure) and make sure it's executable (`chmod +x jmap-backup.py`)
 
-3. Create a configuration file (JSON) to store your API key, destination directory where the backup will be kept, and other settings. You can create multiple config files to back up different accounts or to keep copies on different storage (local, SMB/NFS etc).
+3. Export your environment variables. At minimum:
 
-A bare minimum config file must contain at least the `dest_dir` and `token` keys, for example:
-
-```js
-{
-  "dest_dir": "/Volumes/storage/backups/Fastmail",
-  "token": "{your_api_key_here e.g. fmu1-xxxxxx...}"
-}
+```shell
+export JMAP_TOKEN='fmu1-xxxxxx...'
+export JMAP_DEST_DIR='/Volumes/storage/backups/Fastmail'
 ```
-
-> _The configuration is now in JSON format (prior to v1.1 it was stored as YAML). This change was made because Python can read _and_ write it without requiring the PyYAML module. If you're not comfortable converting your legacy config file to JSON by hand, I suggest using [`yq`][5]:_
-> 
-> ```sh
-> yq -p yaml -o json fastmail.yml >fastmail.json
-> ```
 
 4. Finally, start the backup by running
 
 ```shell
-jmap-backup.py -c ~/.jmapbackup/fastmail.json
+jmap-backup.py
 ```
 
-> If you don't specify a config file with the `-c` option, the program will assume a default path of `~/.jmapbackup/fastmail.json`
+> Backup progress is stored in `~/.jmapbackup/state.json` by default. Override with `JMAP_STATE_FILE` or `--state-file`.
 
 Progress messages will be printed to the console. When the job is finished, you should see your messages in the destination directory, organized in folders in `YYYY-MM` format. The individual messages are saved as standard `.eml` format files with the filename made up of a datestamp, messageid and subject.
 
@@ -63,24 +53,13 @@ Some have requested a Docker configuration to make it easier to set up and run, 
 git clone https://github.com/luckman212/jmap-backup && cd jmap-backup
 ```
 
-2. Create the directories to persistently store your configuration and backups
+2. Create the directory to persistently store your backups
 
 ```shell
-mkdir -p cfg backups/Fastmail
+mkdir -p backups/Fastmail
 ```
 
-3. Set up your config file. It will be slightly different for Docker since the `dest_dir` can either be a local Docker mount/volume or a network share if one is available to your container. Sample config file below:
-
-```shell
-cat <<EOF >cfg/fm-docker.json
-{
-    "delay_hours": 24,
-    "dest_dir": "/backups/Fastmail",
-    "not_before": "2020-01-01",
-    "token": "fmu1-xxxx..."
-}
-EOF
-```
+3. Set your container environment variables (`JMAP_DEST_DIR` should point to your mounted backup path, for example `/backups/Fastmail`).
 
 4. Build the Docker image:
 
@@ -93,40 +72,38 @@ docker build -t jmap-backup .
 ```shell
 docker run --rm \
 --name jmap-backup-1 \
--v /root/jmap-backup/cfg:/cfg \
 -v /root/jmap-backup/backups:/backups \
+-v /root/jmap-backup/state:/state \
+-e JMAP_TOKEN='fmu1-xxxx...' \
+-e JMAP_DEST_DIR='/backups/Fastmail' \
+-e JMAP_STATE_FILE='/state/jmap-state.json' \
 -e JMAP_DEBUG=true \
-jmap-backup \
--c /cfg/fm-docker.json
-```
-
-## Additional (optional) parameters for the config file
-
-| Key           | Description                                                                                                                                                                                                | Example value |
-|:------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------- |
-| `delay_hours` | Back up only messages at least this many hours old                                                                                                                                                         | `24`          |
-| `not_before`  | Cut off date before which messages will not be backed up                                                                                                                                                   | `2018-06-01`  |
-| `pre_cmd`     | Command (and args) to run prior to execution, most often used to mount some remote storage location such as an SMB or NFS share. It is formatted as an array so you can provide additional args as needed. | (see below)   |
-| `post_cmd`    | Command to run post-execution (e.g. unmount the share)                                                                                                                                                     | (see below)   |
-
-Example of pre/post commands in config file (`~` chars will be expanded by Python):
-
-```js
-{ 
-  "pre_cmd": [
-    "/sbin/mount", "-t", "smbfs",
-    "//luckman212:hunter2@nas/backups", "/mnt/jmap"
-  ],
-  "post_cmd": [
-    "/sbin/umount", "-t", "smbfs", "/mnt/jmap"
-  ]
-}
+jmap-backup
 ```
 
 ## Environment Variables
 
-- Export `JMAP_DEBUG` to `True` to see additional debugging info printed to the console.
-- You can export `NOT_BEFORE` to override the default of `2000-01-01` or whatever date is specified in the config file
+| Variable           | Required | Description                                                                                                            | Example value                            |
+|:------------------ |:-------- |:---------------------------------------------------------------------------------------------------------------------- |:---------------------------------------- |
+| `JMAP_TOKEN`       | yes      | Fastmail API token                                                                                                     | `fmu1-xxxx...`                           |
+| `JMAP_DEST_DIR`    | yes      | Destination directory for backups                                                                                      | `/backups/Fastmail`                      |
+| `JMAP_DELAY_HOURS` | no       | Back up only messages at least this many hours old (default: `24`)                                                    | `24`                                     |
+| `JMAP_NOT_BEFORE`  | no       | Cutoff date (`YYYY-MM-DD`) before which messages are skipped (default: `2000-01-01`)                                 | `2018-06-01`                             |
+| `JMAP_PRE_CMD`     | no       | Command run before backup starts. Parsed like a shell command.                                                        | `/sbin/mount -t smbfs //user:pw@nas/x /mnt/jmap` |
+| `JMAP_POST_CMD`    | no       | Command run after backup finishes. Parsed like a shell command.                                                       | `/sbin/umount -t smbfs /mnt/jmap`        |
+| `JMAP_STATE_FILE`  | no       | Path to state file used for incremental runs (default: `~/.jmapbackup/state.json`)                                   | `~/.jmapbackup/state.json`               |
+| `JMAP_DEBUG`       | no       | Set to `true`/`1`/`yes`/`on` for debug output                                                                         | `true`                                   |
+
+Example:
+
+```shell
+export JMAP_TOKEN='fmu1-xxxx...'
+export JMAP_DEST_DIR='/mnt/jmap/Fastmail'
+export JMAP_NOT_BEFORE='2020-01-01'
+export JMAP_PRE_CMD='/sbin/mount -t smbfs //luckman212:hunter2@nas/backups /mnt/jmap'
+export JMAP_POST_CMD='/sbin/umount -t smbfs /mnt/jmap'
+jmap-backup.py
+```
 
 ## Verification
 
@@ -141,4 +118,3 @@ I've been using this script for a few months with good success, but it has been 
 [2]: https://github.com/luckman212/jmap-backup/issues
 [3]: https://www.soma-zone.com/LaunchControl/
 [4]: https://github.com/luckman212/jmap-backup/releases/latest
-[5]: https://github.com/mikefarah/yq
